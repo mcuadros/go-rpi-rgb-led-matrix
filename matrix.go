@@ -5,8 +5,11 @@ package rgbmatrix
 #cgo LDFLAGS: -lrgbmatrix -L${SRCDIR}/vendor/rpi-rgb-led-matrix/lib -lstdc++ -lm
 #include <led-matrix-c.h>
 
-void led_matrix_swap(struct LedCanvas *offscreen_canvas,
+void led_matrix_swap(struct RGBLedMatrix *matrix,
                      int width, int height, const uint32_t pixels[]) {
+  struct LedCanvas *offscreen_canvas;
+  offscreen_canvas = led_matrix_create_offscreen_canvas(matrix);
+
   int i, x, y;
   uint32_t color;
   for (y = 0; y < height; ++y) {
@@ -18,6 +21,8 @@ void led_matrix_swap(struct LedCanvas *offscreen_canvas,
         (color >> 16) & 255, (color >> 8) & 255, color & 255);
     }
   }
+
+  led_matrix_swap_on_vsync(matrix, offscreen_canvas);
 }
 */
 import "C"
@@ -112,7 +117,7 @@ type RGBLedMatrix struct {
 }
 
 // NewRGBLedMatrix returns a new matrix using the given size and config
-func NewRGBLedMatrix(config *HardwareConfig) (Matrix, error) {
+func NewRGBLedMatrix(config *HardwareConfig) (*RGBLedMatrix, error) {
 	w, h := config.geometry()
 
 	c := &RGBLedMatrix{
@@ -140,6 +145,14 @@ func (c *RGBLedMatrix) Geometry() (width, height int) {
 	return c.width, c.height
 }
 
+func (c *RGBLedMatrix) Apply(leds []color.Color) error {
+	for position, l := range leds {
+		c.Set(position, l)
+	}
+
+	return c.Render()
+}
+
 // Render update the display with the data from the LED buffer
 func (c *RGBLedMatrix) Render() error {
 	C.led_matrix_swap(
@@ -148,6 +161,7 @@ func (c *RGBLedMatrix) Render() error {
 		(*C.uint32_t)(unsafe.Pointer(&c.leds[0])),
 	)
 
+	c.leds = make([]C.uint32_t, 2048)
 	return nil
 }
 
@@ -169,6 +183,10 @@ func (c *RGBLedMatrix) Close() error {
 }
 
 func colorToUint32(c color.Color) uint32 {
+	if c == nil {
+		return 0
+	}
+
 	// A color's RGBA method returns values in the range [0, 65535]
 	red, green, blue, _ := c.RGBA()
 	return (red>>8)<<16 | (green>>8)<<8 | blue>>8
