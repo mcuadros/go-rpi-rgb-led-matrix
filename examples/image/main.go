@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/mcuadros/go-rpi-rgb-led-matrix"
 )
 
@@ -13,6 +14,7 @@ var (
 	chain      = flag.Int("led-chain", 2, "number of displays daisy-chained")
 	brightness = flag.Int("brightness", 100, "brightness (0-100)")
 	image      = flag.String("image", "", "image path")
+	rotate     = flag.Int("rotate", 0, "rotate angle, 90, 180, 270")
 )
 
 func main() {
@@ -29,6 +31,15 @@ func main() {
 
 	tk := rgbmatrix.NewToolKit(m)
 	defer tk.Close()
+
+	switch *rotate {
+	case 90:
+		tk.Transform = imaging.Rotate90
+	case 180:
+		tk.Transform = imaging.Rotate180
+	case 270:
+		tk.Transform = imaging.Rotate270
+	}
 
 	close, err := tk.PlayGIF(f)
 	fatal(err)

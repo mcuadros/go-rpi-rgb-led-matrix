@@ -9,12 +9,23 @@ import (
 )
 
 type ToolKit struct {
-	Canvas *Canvas
+	Canvas    *Canvas
+	Transform func(img image.Image) *image.NRGBA
+}
+
+func NewToolKit(m Matrix) *ToolKit {
+	return &ToolKit{
+		Canvas: NewCanvas(m),
+	}
 }
 
 func (tk *ToolKit) PlayImage(i image.Image, delay time.Duration) error {
 	start := time.Now()
 	defer func() { time.Sleep(delay - time.Since(start)) }()
+
+	if tk.Transform != nil {
+		i = tk.Transform(i)
+	}
 
 	draw.Draw(tk.Canvas, tk.Canvas.Bounds(), i, image.ZP, draw.Over)
 	return tk.Canvas.Render()
@@ -63,4 +74,8 @@ func (tk *ToolKit) PlayGIF(r io.Reader) (chan bool, error) {
 	}
 
 	return tk.PlayImages(images, delay, gif.LoopCount), nil
+}
+
+func (tk *ToolKit) Close() error {
+	return tk.Canvas.Close()
 }
