@@ -12,9 +12,9 @@ void led_matrix_swap(struct RGBLedMatrix *matrix,
 
   int i, x, y;
   uint32_t color;
-  for (y = 0; y < height; ++y) {
-    for (x = 0; x < width; ++x) {
-	    i = x + (y * 64);
+  for (x = 0; x < width; ++x) {
+    for (y = 0; y < height; ++y) {
+      i = x + (y * width);
       color = pixels[i];
 
       led_canvas_set_pixel(offscreen_canvas, x, y,
@@ -80,7 +80,7 @@ type HardwareConfig struct {
 }
 
 func (c *HardwareConfig) geometry() (width, height int) {
-	return c.Rows * c.ChainLength, c.Rows
+	return c.Rows * c.ChainLength, c.Rows * c.Parallel
 }
 
 func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
@@ -124,7 +124,7 @@ func NewRGBLedMatrix(config *HardwareConfig) (*RGBLedMatrix, error) {
 		Config: config,
 		width:  w, height: h,
 		matrix: C.led_matrix_create_from_options(config.toC(), nil, nil),
-		leds:   make([]C.uint32_t, 2048),
+		leds:   make([]C.uint32_t, w*h),
 	}
 
 	if c.matrix == nil {
@@ -145,6 +145,7 @@ func (c *RGBLedMatrix) Geometry() (width, height int) {
 	return c.width, c.height
 }
 
+// Apply set all the pixels to the values contained in leds
 func (c *RGBLedMatrix) Apply(leds []color.Color) error {
 	for position, l := range leds {
 		c.Set(position, l)
@@ -155,13 +156,15 @@ func (c *RGBLedMatrix) Apply(leds []color.Color) error {
 
 // Render update the display with the data from the LED buffer
 func (c *RGBLedMatrix) Render() error {
+	w, h := c.Config.geometry()
+
 	C.led_matrix_swap(
 		c.matrix,
-		C.int(64), C.int(32),
+		C.int(w), C.int(h),
 		(*C.uint32_t)(unsafe.Pointer(&c.leds[0])),
 	)
 
-	c.leds = make([]C.uint32_t, 2048)
+	c.leds = make([]C.uint32_t, w*h)
 	return nil
 }
 
