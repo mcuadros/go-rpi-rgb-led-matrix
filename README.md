@@ -17,7 +17,7 @@ The recommended way to install `go-rpi-rgb-led-matrix` is:
 go get github.com/mcuadros/go-rpi-rgb-led-matrix
 ```
 
-Then you will get an *expected* error like this:
+Then you will get an **expected** error like this:
 
 ```
 # github.com/mcuadros/go-rpi-rgb-led-matrix
