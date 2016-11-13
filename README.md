@@ -25,12 +25,11 @@ Then you will get an **expected** error like this:
 collect2: error: ld returned 1 exit status
 ```
 
-This happens because you need to have installed the `rgbmatrix` C bindings,  execute the following commands to install it:
-
+This happens because you need to compile the `rgbmatrix` C bindings:
 ```sh
 cd $GOPATH/src/github.com/mcuadros/go-rpi-rgb-led-matrix/vendor/rpi-rgb-led-matrix/
 git submodule update --init
-make install
+make
 cd $GOPATH/src/github.com/mcuadros/go-rpi-rgb-led-matrix/
 go install -v ./...
 ```

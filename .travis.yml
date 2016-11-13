@@ -5,5 +5,10 @@ go:
   - 1.7
   - tip
 
-script:
-  - go test -v
+before_install:
+  - cd $GOPATH/src/github.com/mcuadros/go-rpi-rgb-led-matrix/vendor/rpi-rgb-led-matrix/
+  - git submodule update --init
+  - make 
+  - cd $GOPATH/src/github.com/mcuadros/go-rpi-rgb-led-matrix/
+  - go get -t -v ./...
+  - go install -v ./...

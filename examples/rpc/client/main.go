@@ -20,10 +20,7 @@ func main() {
 	m, err := rpc.NewClient("tcp", "10.20.20.20:1234")
 	fatal(err)
 
-	c := rgbmatrix.NewCanvas(m)
-	defer c.Close()
-
-	tk := &rgbmatrix.ToolKit{c}
+	tk := rgbmatrix.NewToolKit(m)
 	close, err := tk.PlayGIF(f)
 	fatal(err)
 
