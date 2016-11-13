@@ -8,17 +8,29 @@ import (
 	"time"
 )
 
+// ToolKit is a convinient set of function to operate with a led of Matrix
 type ToolKit struct {
-	Canvas    *Canvas
+	// Canvas is the Canvas wrapping the Matrix, if you want to instanciate
+	// a ToolKit with a custom Canvas you can use directly the struct,
+	// without calling NewToolKit
+	Canvas *Canvas
+
+	// Transform function if present is applied just before draw the image to
+	// the Matrix, this is a small example:
+	//	tk.Transform = func(img image.Image) *image.NRGBA {
+	//		return imaging.Fill(img, 64, 96, imaging.Center, imaging.Lanczos)
+	//	}
 	Transform func(img image.Image) *image.NRGBA
 }
 
+// NewToolKit returns a new ToolKit wrapping the given Matrix
 func NewToolKit(m Matrix) *ToolKit {
 	return &ToolKit{
 		Canvas: NewCanvas(m),
 	}
 }
 
+// PlayImage draws the given image during the given delay
 func (tk *ToolKit) PlayImage(i image.Image, delay time.Duration) error {
 	start := time.Now()
 	defer func() { time.Sleep(delay - time.Since(start)) }()
@@ -31,6 +43,9 @@ func (tk *ToolKit) PlayImage(i image.Image, delay time.Duration) error {
 	return tk.Canvas.Render()
 }
 
+// PlayImages draws a sequence of images during the given delays, the len of
+// images should be equal to the len of delay. If loop is true the function
+// loops over images until a true is sent to the returned chan
 func (tk *ToolKit) PlayImages(images []image.Image, delay []time.Duration, loop int) chan bool {
 	quit := make(chan bool, 0)
 
@@ -60,6 +75,8 @@ func (tk *ToolKit) PlayImages(images []image.Image, delay []time.Duration, loop 
 	return quit
 }
 
+// PlayGIF reads and draw a gif file from r. It use the contained images and
+// delays and loops over it, until a true is sent to the returned chan
 func (tk *ToolKit) PlayGIF(r io.Reader) (chan bool, error) {
 	gif, err := gif.DecodeAll(r)
 	if err != nil {
@@ -76,6 +93,7 @@ func (tk *ToolKit) PlayGIF(r io.Reader) (chan bool, error) {
 	return tk.PlayImages(images, delay, gif.LoopCount), nil
 }
 
+// Close close the toolkit and the inner canvas
 func (tk *ToolKit) Close() error {
 	return tk.Canvas.Close()
 }

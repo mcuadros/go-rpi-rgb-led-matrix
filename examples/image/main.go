@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"image"
 	"os"
 	"time"
 
@@ -11,18 +12,21 @@ import (
 
 var (
 	rows       = flag.Int("led-rows", 32, "number of rows supported")
+	parallel   = flag.Int("led-parallel", 1, "number of daisy-chained panels")
 	chain      = flag.Int("led-chain", 2, "number of displays daisy-chained")
 	brightness = flag.Int("brightness", 100, "brightness (0-100)")
-	image      = flag.String("image", "", "image path")
-	rotate     = flag.Int("rotate", 0, "rotate angle, 90, 180, 270")
+	img        = flag.String("image", "", "image path")
+
+	rotate = flag.Int("rotate", 0, "rotate angle, 90, 180, 270")
 )
 
 func main() {
-	f, err := os.Open(*image)
+	f, err := os.Open(*img)
 	fatal(err)
 
 	config := &rgbmatrix.DefaultConfig
 	config.Rows = *rows
+	config.Parallel = *parallel
 	config.ChainLength = *chain
 	config.Brightness = *brightness
 

@@ -10,6 +10,7 @@ import (
 var (
 	rows       = flag.Int("led-rows", 32, "number of rows supported")
 	chain      = flag.Int("led-chain", 2, "number of displays daisy-chained")
+	parallel   = flag.Int("led-parallel", 1, "number of daisy-chained panels")
 	brightness = flag.Int("brightness", 100, "brightness (0-100)")
 )
 
@@ -18,6 +19,7 @@ func main() {
 	config.Rows = *rows
 	config.ChainLength = *chain
 	config.Brightness = *brightness
+	config.Parallel = *parallel
 
 	m, err := rgbmatrix.NewRGBLedMatrix(config)
 	fatal(err)
