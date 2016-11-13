@@ -77,7 +77,7 @@ time.Sleep(time.Second * 30)
 close <- true
 ```
 
-Using this the running Mario gif, and three 32x64 pannels, was recorded the image from this readme.
+The image of the header was recorded using this few lines, the running _Mario_ gif, and three 32x64 pannels. 
 <img src="https://cloud.githubusercontent.com/assets/1573114/20248173/2e2f97ae-a9de-11e6-95e6-e0548199501d.gif" align="right" width="100" />
 
 Check the folder [`examples`](https://github.com/mcuadros/go-rpi-rgb-led-matrix/tree/master/examples) folder for more examples
