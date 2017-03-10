@@ -43,6 +43,35 @@ func (tk *ToolKit) PlayImage(i image.Image, delay time.Duration) error {
 	return tk.Canvas.Render()
 }
 
+type Animation interface {
+	Next() (image.Image, time.Duration, error)
+}
+
+// PlayAnimation play the image during the delay returned by Next, until an err
+// is returned, if io.EOF is returned, PlayAnimation finish without an error
+func (tk *ToolKit) PlayAnimation(a Animation) error {
+	var err error
+	var i image.Image
+	var d time.Duration
+
+	for {
+		i, d, err = a.Next()
+		if err != nil {
+			break
+		}
+
+		if err := tk.PlayImage(i, d); err != nil {
+			return err
+		}
+	}
+
+	if err == io.EOF {
+		return nil
+	}
+
+	return err
+}
+
 // PlayImages draws a sequence of images during the given delays, the len of
 // images should be equal to the len of delay. If loop is true the function
 // loops over images until a true is sent to the returned chan
