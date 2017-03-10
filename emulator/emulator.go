@@ -3,9 +3,11 @@ package emulator
 import (
 	"image"
 	"image/color"
-	"log"
+	"os"
 
 	"sync"
+
+	"fmt"
 
 	"golang.org/x/exp/shiny/driver"
 	"golang.org/x/exp/shiny/imageutil"
@@ -14,10 +16,8 @@ import (
 	"golang.org/x/mobile/event/size"
 )
 
-var (
-	black = color.RGBA{0x00, 0x00, 0x00, 0xff}
-	red   = color.RGBA{0x7f, 0x00, 0x00, 0x7f}
-)
+const DefaultPixelPitch = 12
+const windowTitle = "RGB led matrix emulator"
 
 var margin = 10
 
@@ -27,60 +27,81 @@ type Emulator struct {
 	Width      int
 	Height     int
 
-	leds    []color.Color
-	w       screen.Window
-	isReady bool
+	leds []color.Color
+	w    screen.Window
+	s    screen.Screen
+	wg   sync.WaitGroup
 
-	wg sync.WaitGroup
+	isReady bool
 }
 
+func NewEmulator(w, h, pixelPitch int, autoInit bool) *Emulator {
+	e := &Emulator{
+		PixelPitch: pixelPitch,
+		Gutter:     int(float64(pixelPitch) * 0.66),
+		Width:      w,
+		Height:     h,
+	}
+
+	if autoInit {
+		e.Init()
+	}
+
+	return e
+}
+
+// Init initialize the emulator, creating a new Window and waiting until is
+// painted. If something goes wrong the function panics
 func (e *Emulator) Init() {
 	e.leds = make([]color.Color, 2048)
 
 	e.wg.Add(1)
-	go e.init()
+	go driver.Main(e.mainWindowLoop)
 	e.wg.Wait()
 }
 
-func (e *Emulator) init() {
-	driver.Main(func(s screen.Screen) {
-		var err error
-		e.w, err = s.NewWindow(&screen.NewWindowOptions{
-			Title: "Basic Shiny Example",
-		})
-
-		if err != nil {
-			panic(err)
-		}
-
-		defer e.w.Release()
-
-		var sz size.Event
-		for {
-			evn := e.w.NextEvent()
-			switch evn := evn.(type) {
-			case paint.Event:
-				for _, r := range imageutil.Border(sz.Bounds(), margin) {
-					e.w.Fill(r, red, screen.Src)
-				}
-
-				e.w.Fill(sz.Bounds().Inset(margin), black, screen.Src)
-				e.w.Publish()
-				if e.isReady {
-					continue
-				}
-
-				e.Apply(make([]color.Color, 2048))
-				e.wg.Done()
-				e.isReady = true
-			case size.Event:
-				sz = evn
-
-			case error:
-				log.Print(e)
-			}
-		}
+func (e *Emulator) mainWindowLoop(s screen.Screen) {
+	var err error
+	e.s = s
+	e.w, err = s.NewWindow(&screen.NewWindowOptions{
+		Title: windowTitle,
 	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer e.w.Release()
+
+	var sz size.Event
+	for {
+		evn := e.w.NextEvent()
+		switch evn := evn.(type) {
+		case paint.Event:
+			e.drawContext(sz)
+			if e.isReady {
+				continue
+			}
+
+			e.Apply(make([]color.Color, 2048))
+			e.wg.Done()
+			e.isReady = true
+		case size.Event:
+			sz = evn
+
+		case error:
+			fmt.Fprintln(os.Stderr, e)
+		}
+	}
+}
+
+func (e *Emulator) drawContext(sz size.Event) {
+	for _, r := range imageutil.Border(sz.Bounds(), margin) {
+		e.w.Fill(r, color.White, screen.Src)
+	}
+
+	e.w.Fill(sz.Bounds().Inset(margin), color.Black, screen.Src)
+	e.w.Publish()
 }
 
 func (e *Emulator) Geometry() (width, height int) {
@@ -98,8 +119,10 @@ func (e *Emulator) Apply(leds []color.Color) error {
 			x += margin * 2
 			y += margin * 2
 
-			c := e.At(col + (row * e.Width))
-			e.w.Fill(image.Rect(x, y, x+e.PixelPitch, y+e.PixelPitch), c, screen.Over)
+			color := e.At(col + (row * e.Width))
+			led := image.Rect(x, y, x+e.PixelPitch, y+e.PixelPitch)
+
+			e.w.Fill(led, color, screen.Over)
 		}
 	}
 

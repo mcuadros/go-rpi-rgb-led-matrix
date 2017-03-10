@@ -29,7 +29,10 @@ import "C"
 import (
 	"fmt"
 	"image/color"
+	"os"
 	"unsafe"
+
+	"github.com/mcuadros/go-rpi-rgb-led-matrix/emulator"
 )
 
 // DefaultConfig default WS281x configuration
@@ -116,8 +119,14 @@ type RGBLedMatrix struct {
 	leds   []C.uint32_t
 }
 
+const MatrixEmulatorENV = "MATRIX_EMULATOR"
+
 // NewRGBLedMatrix returns a new matrix using the given size and config
-func NewRGBLedMatrix(config *HardwareConfig) (*RGBLedMatrix, error) {
+func NewRGBLedMatrix(config *HardwareConfig) (Matrix, error) {
+	if isMatrixEmulator() {
+		return buildMatrixEmulator(config), nil
+	}
+
 	w, h := config.geometry()
 
 	c := &RGBLedMatrix{
@@ -132,6 +141,19 @@ func NewRGBLedMatrix(config *HardwareConfig) (*RGBLedMatrix, error) {
 	}
 
 	return c, nil
+}
+
+func isMatrixEmulator() bool {
+	if os.Getenv(MatrixEmulatorENV) == "1" {
+		return true
+	}
+
+	return false
+}
+
+func buildMatrixEmulator(config *HardwareConfig) Matrix {
+	w, h := config.geometry()
+	return emulator.NewEmulator(w, h, emulator.DefaultPixelPitch, true)
 }
 
 // Initialize initialize library, must be called once before other functions are

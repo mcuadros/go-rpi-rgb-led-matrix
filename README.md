@@ -81,6 +81,15 @@ The image of the header was recorded using this few lines, the running _Mario_ g
 
 Check the folder [`examples`](https://github.com/mcuadros/go-rpi-rgb-led-matrix/tree/master/examples) folder for more examples
 
+
+Matrix Emulation
+----------------
+
+As part of the library an small Matrix emulator is provided. The emulator renderize a virtual RGB matrix on a window in your desktop, without needing a real RGB matrix connected to your computer.
+
+To execute the emulator set the `MATRIX_EMULATOR` environment variable to `1`, then when `NewRGBLedMatrix` is used, a `emulator.Emulator` is returned instead of a interface the real board.
+
+
 License
 -------
 
