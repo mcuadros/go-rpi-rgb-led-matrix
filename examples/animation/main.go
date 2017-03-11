@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"image"
+	"image/color"
 	"time"
 
 	"github.com/fogleman/gg"
@@ -57,16 +58,16 @@ func NewAnimation(sz image.Point) *Animation {
 	}
 }
 
-func (a *Animation) Next() (image.Image, time.Duration, error) {
+func (a *Animation) Next() (image.Image, <-chan time.Time, error) {
 	defer a.updatePosition()
 
-	a.ctx.SetRGB(0, 0, 0)
+	a.ctx.SetColor(color.Black)
 	a.ctx.Clear()
 
 	a.ctx.DrawCircle(float64(a.position.X), float64(a.position.Y), float64(a.stroke))
-	a.ctx.SetRGB(1, 0, 0)
+	a.ctx.SetColor(color.RGBA{255, 0, 0, 0})
 	a.ctx.Fill()
-	return a.ctx.Image(), time.Millisecond * 50, nil
+	return a.ctx.Image(), time.After(time.Millisecond * 50), nil
 }
 
 func (a *Animation) updatePosition() {

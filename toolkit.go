@@ -44,7 +44,7 @@ func (tk *ToolKit) PlayImage(i image.Image, delay time.Duration) error {
 }
 
 type Animation interface {
-	Next() (image.Image, time.Duration, error)
+	Next() (image.Image, <-chan time.Time, error)
 }
 
 // PlayAnimation play the image during the delay returned by Next, until an err
@@ -52,15 +52,15 @@ type Animation interface {
 func (tk *ToolKit) PlayAnimation(a Animation) error {
 	var err error
 	var i image.Image
-	var d time.Duration
+	var n <-chan time.Time
 
 	for {
-		i, d, err = a.Next()
+		i, n, err = a.Next()
 		if err != nil {
 			break
 		}
 
-		if err := tk.PlayImage(i, d); err != nil {
+		if err := tk.PlayImageUntil(i, n); err != nil {
 			return err
 		}
 	}
@@ -70,6 +70,20 @@ func (tk *ToolKit) PlayAnimation(a Animation) error {
 	}
 
 	return err
+}
+
+// PlayImageUntil draws the given image until is notified to stop
+func (tk *ToolKit) PlayImageUntil(i image.Image, notify <-chan time.Time) error {
+	defer func() {
+		<-notify
+	}()
+
+	if tk.Transform != nil {
+		i = tk.Transform(i)
+	}
+
+	draw.Draw(tk.Canvas, tk.Canvas.Bounds(), i, image.ZP, draw.Over)
+	return tk.Canvas.Render()
 }
 
 // PlayImages draws a sequence of images during the given delays, the len of
