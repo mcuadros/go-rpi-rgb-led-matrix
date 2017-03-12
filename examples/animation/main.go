@@ -65,7 +65,7 @@ func (a *Animation) Next() (image.Image, <-chan time.Time, error) {
 	a.ctx.Clear()
 
 	a.ctx.DrawCircle(float64(a.position.X), float64(a.position.Y), float64(a.stroke))
-	a.ctx.SetColor(color.RGBA{255, 0, 0, 0})
+	a.ctx.SetColor(color.RGBA{255, 0, 0, 255})
 	a.ctx.Fill()
 	return a.ctx.Image(), time.After(time.Millisecond * 50), nil
 }

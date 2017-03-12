@@ -1,13 +1,11 @@
 package emulator
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"os"
-
 	"sync"
-
-	"fmt"
 
 	"golang.org/x/exp/shiny/driver"
 	"golang.org/x/exp/shiny/imageutil"
@@ -53,7 +51,7 @@ func NewEmulator(w, h, pixelPitch int, autoInit bool) *Emulator {
 // Init initialize the emulator, creating a new Window and waiting until is
 // painted. If something goes wrong the function panics
 func (e *Emulator) Init() {
-	e.leds = make([]color.Color, 2048)
+	e.leds = make([]color.Color, e.Width*e.Height)
 
 	e.wg.Add(1)
 	go driver.Main(e.mainWindowLoop)
@@ -83,7 +81,7 @@ func (e *Emulator) mainWindowLoop(s screen.Screen) {
 				continue
 			}
 
-			e.Apply(make([]color.Color, 2048))
+			e.Apply(make([]color.Color, e.Width*e.Height))
 			e.wg.Done()
 			e.isReady = true
 		case size.Event:
@@ -96,6 +94,7 @@ func (e *Emulator) mainWindowLoop(s screen.Screen) {
 }
 
 func (e *Emulator) drawContext(sz size.Event) {
+	e.updatePixelPitch(sz.Size())
 	for _, r := range imageutil.Border(sz.Bounds(), margin) {
 		e.w.Fill(r, color.White, screen.Src)
 	}
@@ -104,12 +103,25 @@ func (e *Emulator) drawContext(sz size.Event) {
 	e.w.Publish()
 }
 
+func (e *Emulator) updatePixelPitch(size image.Point) {
+	maxLedSizeInX := (size.X - (margin * 2)) / e.Width
+	maxLedSizeInY := (size.Y - (margin * 2)) / e.Height
+
+	maxLedSize := maxLedSizeInY
+	if maxLedSizeInX < maxLedSizeInY {
+		maxLedSize = maxLedSizeInX
+	}
+
+	e.PixelPitch = 2 * (maxLedSize / 3.)
+	e.Gutter = maxLedSize / 3
+}
+
 func (e *Emulator) Geometry() (width, height int) {
 	return e.Width, e.Height
 }
 
 func (e *Emulator) Apply(leds []color.Color) error {
-	defer func() { e.leds = make([]color.Color, 2048) }()
+	defer func() { e.leds = make([]color.Color, e.Height*e.Width) }()
 
 	for col := 0; col < e.Width; col++ {
 		for row := 0; row < e.Height; row++ {
