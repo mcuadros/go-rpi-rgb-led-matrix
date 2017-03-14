@@ -1,5 +1,6 @@
 # go-rpi-rgb-led-matrix [![GoDoc](https://godoc.org/github.com/mcuadros/go-rpi-rgb-led-matrix?status.svg)](https://godoc.org/github.com/mcuadros/go-rpi-rgb-led-matrix) [![Build Status](https://travis-ci.org/mcuadros/go-rpi-rgb-led-matrix.svg?branch=master)](https://travis-ci.org/mcuadros/go-rpi-rgb-led-matrix) 
 <img width="250" src="https://cloud.githubusercontent.com/assets/1573114/20248154/c17c1f2e-a9dd-11e6-805b-bf7d8ee73121.gif" align="right" />
+
 Go binding for [`rpi-rgb-led-matrix`](https://github.com/hzeller/rpi-rgb-led-matrix) an excellent C++ library to control [RGB LED displays](https://learn.adafruit.com/32x16-32x32-rgb-led-matrix/overview) with Raspberry Pi GPIO.
 
 This library includes the basic bindings to control de LED Matrix directly and also a convenient [ToolKit](https://godoc.org/github.com/mcuadros/go-rpi-rgb-led-matrix#ToolKit) with more high level functions. Also some [examples](https://github.com/mcuadros/go-rpi-rgb-led-matrix/tree/master/examples) are included to test the library and the configuration.
