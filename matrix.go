@@ -138,9 +138,9 @@ func NewRGBLedMatrix(config *HardwareConfig) (m Matrix, err error) {
 	}
 
 	w, h := config.geometry()
-	m = C.led_matrix_create_from_options(config.toC(), nil, nil)
+	m := C.led_matrix_create_from_options(config.toC(), nil, nil)
 	b := C.led_matrix_create_offscreen_canvas(m)
-	c := &RGBLedMatrix{
+	c = &RGBLedMatrix{
 		Config: config,
 		width:  w, height: h,
 		matrix: m,
