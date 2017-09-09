@@ -147,7 +147,7 @@ func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
 		buffer: b,
 		leds:   make([]C.uint32_t, w*h),
 	}
-	if c.matrix == nil {
+	if m == nil {
 		return nil, fmt.Errorf("unable to allocate memory")
 	}
 
