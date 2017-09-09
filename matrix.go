@@ -122,7 +122,7 @@ type RGBLedMatrix struct {
 const MatrixEmulatorENV = "MATRIX_EMULATOR"
 
 // NewRGBLedMatrix returns a new matrix using the given size and config
-func NewRGBLedMatrix(config *HardwareConfig) (m Matrix, err error) {
+func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
