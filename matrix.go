@@ -122,7 +122,17 @@ type RGBLedMatrix struct {
 const MatrixEmulatorENV = "MATRIX_EMULATOR"
 
 // NewRGBLedMatrix returns a new matrix using the given size and config
-func NewRGBLedMatrix(config *HardwareConfig) (Matrix, error) {
+func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("error creating matrix: %v", r)
+			}
+		}
+	}()
+	
 	if isMatrixEmulator() {
 		return buildMatrixEmulator(config), nil
 	}
@@ -130,14 +140,14 @@ func NewRGBLedMatrix(config *HardwareConfig) (Matrix, error) {
 	w, h := config.geometry()
 	m := C.led_matrix_create_from_options(config.toC(), nil, nil)
 	b := C.led_matrix_create_offscreen_canvas(m)
-	c := &RGBLedMatrix{
+	c = &RGBLedMatrix{
 		Config: config,
 		width:  w, height: h,
 		matrix: m,
 		buffer: b,
 		leds:   make([]C.uint32_t, w*h),
 	}
-	if c.matrix == nil {
+	if m == nil {
 		return nil, fmt.Errorf("unable to allocate memory")
 	}
 
