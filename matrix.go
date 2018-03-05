@@ -37,6 +37,7 @@ import (
 // DefaultConfig default WS281x configuration
 var DefaultConfig = HardwareConfig{
 	Rows:              32,
+	Cols:              32,
 	ChainLength:       1,
 	Parallel:          1,
 	PWMBits:           11,
@@ -49,6 +50,8 @@ var DefaultConfig = HardwareConfig{
 type HardwareConfig struct {
 	// Rows the number of rows supported by the display, so 32 or 16.
 	Rows int
+	// Cols the number of columns supported by the display, so 32 or 64 .
+	Cols int
 	// ChainLengthis the number of displays daisy-chained together
 	// (output of one connected to input of next).
 	ChainLength int
@@ -82,12 +85,13 @@ type HardwareConfig struct {
 }
 
 func (c *HardwareConfig) geometry() (width, height int) {
-	return c.Rows * c.ChainLength, c.Rows * c.Parallel
+	return c.Cols * c.ChainLength, c.Rows * c.Parallel
 }
 
 func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
 	o := &C.struct_RGBLedMatrixOptions{}
 	o.rows = C.int(c.Rows)
+	o.cols = C.int(c.Cols)
 	o.chain_length = C.int(c.ChainLength)
 	o.parallel = C.int(c.Parallel)
 	o.pwm_bits = C.int(c.PWMBits)
@@ -132,7 +136,7 @@ func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
 			}
 		}
 	}()
-	
+
 	if isMatrixEmulator() {
 		return buildMatrixEmulator(config), nil
 	}
