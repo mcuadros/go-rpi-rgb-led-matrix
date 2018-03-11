@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"golang.org/x/exp/shiny/driver"
-	"golang.org/x/exp/shiny/imageutil"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/mobile/event/paint"
 	"golang.org/x/mobile/event/size"
@@ -17,13 +16,14 @@ import (
 const DefaultPixelPitch = 12
 const windowTitle = "RGB led matrix emulator"
 
-var margin = 10
-
 type Emulator struct {
-	PixelPitch int
-	Gutter     int
-	Width      int
-	Height     int
+	PixelPitch              int
+	Gutter                  int
+	Width                   int
+	Height                  int
+	GutterColor             color.Color
+	PixelPitchToGutterRatio int
+	Margin                  int
 
 	leds []color.Color
 	w    screen.Window
@@ -35,11 +35,13 @@ type Emulator struct {
 
 func NewEmulator(w, h, pixelPitch int, autoInit bool) *Emulator {
 	e := &Emulator{
-		PixelPitch: pixelPitch,
-		Gutter:     int(float64(pixelPitch) * 0.66),
-		Width:      w,
-		Height:     h,
+		Width:                   w,
+		Height:                  h,
+		GutterColor:             color.Gray{Y: 20},
+		PixelPitchToGutterRatio: 2,
+		Margin:                  10,
 	}
+	e.updatePixelPitchForGutter(pixelPitch / e.PixelPitchToGutterRatio)
 
 	if autoInit {
 		e.Init()
@@ -61,8 +63,12 @@ func (e *Emulator) Init() {
 func (e *Emulator) mainWindowLoop(s screen.Screen) {
 	var err error
 	e.s = s
+	// Calculate initial window size based on whatever our gutter/pixel pitch currently is.
+	dims := e.matrixWithMarginsRect()
 	e.w, err = s.NewWindow(&screen.NewWindowOptions{
-		Title: windowTitle,
+		Title:  windowTitle,
+		Width:  dims.Max.X,
+		Height: dims.Max.Y,
 	})
 
 	if err != nil {
@@ -94,26 +100,68 @@ func (e *Emulator) mainWindowLoop(s screen.Screen) {
 }
 
 func (e *Emulator) drawContext(sz size.Event) {
-	e.updatePixelPitch(sz.Size())
-	for _, r := range imageutil.Border(sz.Bounds(), margin) {
-		e.w.Fill(r, color.White, screen.Src)
-	}
-
-	e.w.Fill(sz.Bounds().Inset(margin), color.Black, screen.Src)
-	e.w.Publish()
+	e.updatePixelPitchForGutter(e.calculateGutterForViewableArea(sz.Size()))
+	// Fill entire background with white.
+	e.w.Fill(sz.Bounds(), color.White, screen.Src)
+	// Fill matrix display rectangle with the gutter color.
+	e.w.Fill(e.matrixWithMarginsRect(), e.GutterColor, screen.Src)
+	// Set all LEDs to black.
+	e.Apply(make([]color.Color, e.Width*e.Height))
 }
 
-func (e *Emulator) updatePixelPitch(size image.Point) {
-	maxLedSizeInX := (size.X - (margin * 2)) / e.Width
-	maxLedSizeInY := (size.Y - (margin * 2)) / e.Height
+// Some formulas that allowed me to better understand the drawable area. I found that the math was
+// easiest when put in terms of the Gutter width, hence the addition of PixelPitchToGutterRatio.
+//
+// PixelPitch = PixelPitchToGutterRatio * Gutter
+// DisplayWidth = (PixelPitch * LEDColumns) + (Gutter * (LEDColumns - 1)) + (2 * Margin)
+// Gutter = (DisplayWidth - (2 * Margin)) / (PixelPitchToGutterRatio * LEDColumns + LEDColumns - 1)
+//
+//  MMMMMMMMMMMMMMMM.....MMMM
+//  MGGGGGGGGGGGGGGG.....GGGM
+//  MGLGLGLGLGLGLGLG.....GLGM
+//  MGGGGGGGGGGGGGGG.....GGGM
+//  MGLGLGLGLGLGLGLG.....GLGM
+//  MGGGGGGGGGGGGGGG.....GGGM
+//  .........................
+//  MGGGGGGGGGGGGGGG.....GGGM
+//  MGLGLGLGLGLGLGLG.....GLGM
+//  MGGGGGGGGGGGGGGG.....GGGM
+//  MMMMMMMMMMMMMMMM.....MMMM
+//
+//  where:
+//    M = Margin
+//    G = Gutter
+//    L = LED
 
-	maxLedSize := maxLedSizeInY
-	if maxLedSizeInX < maxLedSizeInY {
-		maxLedSize = maxLedSizeInX
+// matrixWithMarginsRect Returns a Rectangle that describes entire emulated RGB Matrix, including margins.
+func (e *Emulator) matrixWithMarginsRect() image.Rectangle {
+	upperLeftLED := e.ledRect(0, 0)
+	lowerRightLED := e.ledRect(e.Width-1, e.Height-1)
+	return image.Rect(upperLeftLED.Min.X-e.Margin, upperLeftLED.Min.Y-e.Margin, lowerRightLED.Max.X+e.Margin, lowerRightLED.Max.Y+e.Margin)
+}
+
+// ledRect Returns a Rectangle for the LED at col and row.
+func (e *Emulator) ledRect(col int, row int) image.Rectangle {
+	x := (col * (e.PixelPitch + e.Gutter)) + e.Margin
+	y := (row * (e.PixelPitch + e.Gutter)) + e.Margin
+	return image.Rect(x, y, x+e.PixelPitch, y+e.PixelPitch)
+}
+
+// calculateGutterForViewableArea As the name states, calculates the size of the gutter for a given viewable area.
+// It's easier to understand the geometry of the matrix on screen when put in terms of the gutter,
+// hence the shift toward calculating the gutter size.
+func (e *Emulator) calculateGutterForViewableArea(size image.Point) int {
+	maxGutterInX := (size.X - 2*e.Margin) / (e.PixelPitchToGutterRatio*e.Width + e.Width - 1)
+	maxGutterInY := (size.Y - 2*e.Margin) / (e.PixelPitchToGutterRatio*e.Height + e.Height - 1)
+	if maxGutterInX < maxGutterInY {
+		return maxGutterInX
 	}
+	return maxGutterInY
+}
 
-	e.PixelPitch = 2 * (maxLedSize / 3.)
-	e.Gutter = maxLedSize / 3
+func (e *Emulator) updatePixelPitchForGutter(gutterWidth int) {
+	e.PixelPitch = e.PixelPitchToGutterRatio * gutterWidth
+	e.Gutter = gutterWidth
 }
 
 func (e *Emulator) Geometry() (width, height int) {
@@ -123,18 +171,11 @@ func (e *Emulator) Geometry() (width, height int) {
 func (e *Emulator) Apply(leds []color.Color) error {
 	defer func() { e.leds = make([]color.Color, e.Height*e.Width) }()
 
+	var c color.Color
 	for col := 0; col < e.Width; col++ {
 		for row := 0; row < e.Height; row++ {
-			x := col * (e.PixelPitch + e.Gutter)
-			y := row * (e.PixelPitch + e.Gutter)
-
-			x += margin * 2
-			y += margin * 2
-
-			color := e.At(col + (row * e.Width))
-			led := image.Rect(x, y, x+e.PixelPitch, y+e.PixelPitch)
-
-			e.w.Fill(led, color, screen.Over)
+			c = e.At(col + (row * e.Width))
+			e.w.Fill(e.ledRect(col, row), c, screen.Over)
 		}
 	}
 
