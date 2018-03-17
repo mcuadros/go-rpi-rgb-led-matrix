@@ -23,6 +23,18 @@ void led_matrix_swap(struct RGBLedMatrix *matrix, struct LedCanvas *offscreen_ca
 
   offscreen_canvas = led_matrix_swap_on_vsync(matrix, offscreen_canvas);
 }
+
+void set_show_refresh_rate(struct RGBLedMatrixOptions *o, int show_refresh_rate) {
+  o->show_refresh_rate = show_refresh_rate != 0 ? 1 : 0;
+}
+
+void set_disable_hardware_pulsing(struct RGBLedMatrixOptions *o, int disable_hardware_pulsing) {
+  o->disable_hardware_pulsing = disable_hardware_pulsing != 0 ? 1 : 0;
+}
+
+void set_inverse_colors(struct RGBLedMatrixOptions *o, int inverse_colors) {
+  o->inverse_colors = inverse_colors != 0 ? 1 : 0;
+}
 */
 import "C"
 import (
@@ -37,6 +49,7 @@ import (
 // DefaultConfig default WS281x configuration
 var DefaultConfig = HardwareConfig{
 	Rows:              32,
+	Cols:              32,
 	ChainLength:       1,
 	Parallel:          1,
 	PWMBits:           11,
@@ -49,6 +62,8 @@ var DefaultConfig = HardwareConfig{
 type HardwareConfig struct {
 	// Rows the number of rows supported by the display, so 32 or 16.
 	Rows int
+	// Cols the number of columns supported by the display, so 32 or 64 .
+	Cols int
 	// ChainLengthis the number of displays daisy-chained together
 	// (output of one connected to input of next).
 	ChainLength int
@@ -79,24 +94,44 @@ type HardwareConfig struct {
 
 	ShowRefreshRate bool
 	InverseColors   bool
+
+	// Name of GPIO mapping used
+	HardwareMapping string
 }
 
 func (c *HardwareConfig) geometry() (width, height int) {
-	return c.Rows * c.ChainLength, c.Rows * c.Parallel
+	return c.Cols * c.ChainLength, c.Rows * c.Parallel
 }
 
 func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
 	o := &C.struct_RGBLedMatrixOptions{}
 	o.rows = C.int(c.Rows)
+	o.cols = C.int(c.Cols)
 	o.chain_length = C.int(c.ChainLength)
 	o.parallel = C.int(c.Parallel)
 	o.pwm_bits = C.int(c.PWMBits)
 	o.pwm_lsb_nanoseconds = C.int(c.PWMLSBNanoseconds)
 	o.brightness = C.int(c.Brightness)
 	o.scan_mode = C.int(c.ScanMode)
-	//	o.disable_hardware_pulsing = c.DisableHardwarePulsing
-	//	o.show_refresh_rate = c.ShowRefreshRate
-	//	o.inverse_colors = c.InverseColors
+	o.hardware_mapping = C.CString(c.HardwareMapping)
+
+	if c.ShowRefreshRate == true {
+		C.set_show_refresh_rate(o, C.int(1))
+	} else {
+		C.set_show_refresh_rate(o, C.int(0))
+	}
+
+	if c.DisableHardwarePulsing == true {
+		C.set_disable_hardware_pulsing(o, C.int(1))
+	} else {
+		C.set_disable_hardware_pulsing(o, C.int(0))
+	}
+
+	if c.InverseColors == true {
+		C.set_inverse_colors(o, C.int(1))
+	} else {
+		C.set_inverse_colors(o, C.int(0))
+	}
 
 	return o
 }
@@ -132,7 +167,7 @@ func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
 			}
 		}
 	}()
-	
+
 	if isMatrixEmulator() {
 		return buildMatrixEmulator(config), nil
 	}
