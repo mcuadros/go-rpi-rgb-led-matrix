@@ -95,6 +95,9 @@ type HardwareConfig struct {
 	ShowRefreshRate bool
 	InverseColors   bool
 
+	// Control speed of GPIO updates. Valid range is 0..3
+	GPIOSlowdown int
+
 	// Name of GPIO mapping used
 	HardwareMapping string
 }
@@ -114,6 +117,7 @@ func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
 	o.brightness = C.int(c.Brightness)
 	o.scan_mode = C.int(c.ScanMode)
 	o.hardware_mapping = C.CString(c.HardwareMapping)
+	o.gpio_slowdown = C.int(c.GPIOSlowdown)
 
 	if c.ShowRefreshRate == true {
 		C.set_show_refresh_rate(o, C.int(1))
