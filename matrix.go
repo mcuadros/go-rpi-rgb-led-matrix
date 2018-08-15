@@ -56,6 +56,7 @@ var DefaultConfig = HardwareConfig{
 	PWMLSBNanoseconds: 130,
 	Brightness:        100,
 	ScanMode:          Progressive,
+	GPIOSlowdown:      1,
 }
 
 // HardwareConfig rgb-led-matrix configuration
