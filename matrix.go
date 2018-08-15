@@ -120,7 +120,7 @@ func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
 	o.hardware_mapping = C.CString(c.HardwareMapping)
 
 	if c.GPIOSlowdown >= 0 && c.GPIOSlowdown < 3 {
-		C.gpio_slowdown(gpio_slowdown)
+		C.gpio_slowdown(c.GPIOSlowdown)
 	}
 
 	if c.ShowRefreshRate == true {
