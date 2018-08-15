@@ -118,7 +118,10 @@ func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
 	o.brightness = C.int(c.Brightness)
 	o.scan_mode = C.int(c.ScanMode)
 	o.hardware_mapping = C.CString(c.HardwareMapping)
-	o.gpio_slowdown = C.int(c.GPIOSlowdown)
+
+	if c.GPIOSlowdown >= 0 && c.GPIOSlowdown < 3 {
+		C.gpio_slowdown(gpio_slowdown)
+	}
 
 	if c.ShowRefreshRate == true {
 		C.set_show_refresh_rate(o, C.int(1))
