@@ -103,17 +103,6 @@ func (c *HardwareConfig) geometry() (width, height int) {
 	return c.Cols * c.ChainLength, c.Rows * c.Parallel
 }
 
-func (r *RuntimeOptions) toC() *C.struct_RuntimeOptions {
-	o := &C.struct_RuntimeOptions{}
-	o.gpio_slowdown = C.int(r.GPIOSlowdown)
-
-	if c.GPIOSlowdown > 0 || c.GPIOSlowdown > 4 {
-		o.gpio_slowdown = 1
-	}
-
-	return o
-}
-
 func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
 	o := &C.struct_RGBLedMatrixOptions{}
 	o.rows = C.int(c.Rows)
