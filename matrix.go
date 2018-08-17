@@ -58,11 +58,6 @@ var DefaultConfig = HardwareConfig{
 	ScanMode:          Progressive,
 }
 
-type RuntimeOptions struct {
-	// Control speed of GPIO updates. Valid range is 0..3
-	GPIOSlowdown int
-}
-
 // HardwareConfig rgb-led-matrix configuration
 type HardwareConfig struct {
 	// Rows the number of rows supported by the display, so 32 or 16.
@@ -174,6 +169,8 @@ const MatrixEmulatorENV = "MATRIX_EMULATOR"
 
 func stringsToC(s []string) **C.char {
 	cArray := C.malloc(C.size_t(len(s)) * C.size_t(unsafe.Sizeof(uintptr(0))))
+
+	a := (*[len(s) - 1]*C.char)(cArray)
 
 	for idx, substring := range s {
 		a[idx] = C.CString(substring)
