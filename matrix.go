@@ -196,7 +196,9 @@ func NewRGBLedMatrix(config *HardwareConfig, argc *int, argv *[]string) (c Matri
 	}
 
 	w, h := config.geometry()
-	m := C.led_matrix_create_from_options(config.toC(), &C.int(*argc), &stringsToC(*argv))
+	cargc := C.int(*argc)
+	cargv := stringsToC(*argv)
+	m := C.led_matrix_create_from_options(config.toC(), &cargc, &cargv)
 	b := C.led_matrix_create_offscreen_canvas(m)
 	c = &RGBLedMatrix{
 		Config: config,
