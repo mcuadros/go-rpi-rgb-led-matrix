@@ -4,7 +4,6 @@ package rgbmatrix
 #cgo CFLAGS: -std=c99 -I${SRCDIR}/vendor/rpi-rgb-led-matrix/include -DSHOW_REFRESH_RATE
 #cgo LDFLAGS: -lrgbmatrix -L${SRCDIR}/vendor/rpi-rgb-led-matrix/lib -lstdc++ -lm
 #include <led-matrix-c.h>
-#include "led-matrix.h"
 
 void led_matrix_swap(struct RGBLedMatrix *matrix, struct LedCanvas *offscreen_canvas,
                      int width, int height, const uint32_t pixels[]) {
@@ -173,8 +172,18 @@ type RGBLedMatrix struct {
 
 const MatrixEmulatorENV = "MATRIX_EMULATOR"
 
+func stringsToC(s []string) **C.char {
+	cArray := C.malloc(C.size_t(len(s)) * C.size_t(unsafe.Sizeof(uintptr(0))))
+
+	for idx, substring := range s {
+		a[idx] = C.CString(substring)
+	}
+
+	return (**C.char)(cArray)
+}
+
 // NewRGBLedMatrix returns a new matrix using the given size and config
-func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
+func NewRGBLedMatrix(config *HardwareConfig, argc *int, argv *[]string) (c Matrix, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -190,7 +199,7 @@ func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
 	}
 
 	w, h := config.geometry()
-	m := C.led_matrix_create_from_options(config.toC(), nil, nil)
+	m := C.led_matrix_create_from_options(config.toC(), argc, &stringsToC(*argv))
 	b := C.led_matrix_create_offscreen_canvas(m)
 	c = &RGBLedMatrix{
 		Config: config,
