@@ -159,7 +159,7 @@ const MatrixEmulatorENV = "MATRIX_EMULATOR"
 func stringsToC(s []string) **C.char {
 	cArray := C.malloc(C.size_t(len(s)) * C.size_t(unsafe.Sizeof(uintptr(0))))
 
-	a := (*[1<<30 - 1]*C.char)(cArray)
+	a := (*[2000]*C.char)(cArray)
 
 	for idx, substring := range s {
 		a[idx] = C.CString(substring)
