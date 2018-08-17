@@ -56,7 +56,11 @@ var DefaultConfig = HardwareConfig{
 	PWMLSBNanoseconds: 130,
 	Brightness:        100,
 	ScanMode:          Progressive,
-	GPIOSlowdown:      1,
+}
+
+type RuntimeOptions struct {
+	// Control speed of GPIO updates. Valid range is 0..3
+	GPIOSlowdown int
 }
 
 // HardwareConfig rgb-led-matrix configuration
@@ -96,15 +100,23 @@ type HardwareConfig struct {
 	ShowRefreshRate bool
 	InverseColors   bool
 
-	// Control speed of GPIO updates. Valid range is 0..3
-	GPIOSlowdown int
-
 	// Name of GPIO mapping used
 	HardwareMapping string
 }
 
 func (c *HardwareConfig) geometry() (width, height int) {
 	return c.Cols * c.ChainLength, c.Rows * c.Parallel
+}
+
+func (r *RuntimeOptions) toC() *C.struct_RuntimeOptions {
+	o := &C.struct_RuntimeOptions{}
+	o.gpio_slowdown = C.int(r.GPIOSlowdown)
+
+	if c.GPIOSlowdown > 0 || c.GPIOSlowdown > 4 {
+		o.gpio_slowdown = 1
+	}
+
+	return o
 }
 
 func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
@@ -118,10 +130,6 @@ func (c *HardwareConfig) toC() *C.struct_RGBLedMatrixOptions {
 	o.brightness = C.int(c.Brightness)
 	o.scan_mode = C.int(c.ScanMode)
 	o.hardware_mapping = C.CString(c.HardwareMapping)
-
-	if c.GPIOSlowdown >= 0 && c.GPIOSlowdown < 3 {
-		C.gpio_slowdown(c.GPIOSlowdown)
-	}
 
 	if c.ShowRefreshRate == true {
 		C.set_show_refresh_rate(o, C.int(1))
@@ -182,6 +190,39 @@ func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
 
 	w, h := config.geometry()
 	m := C.led_matrix_create_from_options(config.toC(), nil, nil)
+	b := C.led_matrix_create_offscreen_canvas(m)
+	c = &RGBLedMatrix{
+		Config: config,
+		width:  w, height: h,
+		matrix: m,
+		buffer: b,
+		leds:   make([]C.uint32_t, w*h),
+	}
+	if m == nil {
+		return nil, fmt.Errorf("unable to allocate memory")
+	}
+
+	return c, nil
+}
+
+// NewRGBLedMatrix returns a new matrix using the given size and config
+func NewRGBLedMatrixWithOptions(config *HardwareConfig, run *RuntimeOptions) (c Matrix, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("error creating matrix: %v", r)
+			}
+		}
+	}()
+
+	if isMatrixEmulator() {
+		return buildMatrixEmulator(config), nil
+	}
+
+	w, h := config.geometry()
+	m := C.from_matrix(C.CreateMatrixFromOptions(config.toC(), run.toC()))
 	b := C.led_matrix_create_offscreen_canvas(m)
 	c = &RGBLedMatrix{
 		Config: config,
