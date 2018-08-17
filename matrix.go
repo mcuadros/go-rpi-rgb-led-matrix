@@ -169,7 +169,7 @@ func stringsToC(s []string) **C.char {
 }
 
 // NewRGBLedMatrix returns a new matrix using the given size and config
-func NewRGBLedMatrix(config *HardwareConfig, argc *int, argv *[]string) (c Matrix, err error) {
+func NewRGBLedMatrix(config *HardwareConfig) (c Matrix, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -185,10 +185,8 @@ func NewRGBLedMatrix(config *HardwareConfig, argc *int, argv *[]string) (c Matri
 	}
 
 	w, h := config.geometry()
-	cargc := C.int(*argc)
-	cargv := stringsToC(*argv)
-	fmt.Printf("ArgV: %#v", *argv)
-	fmt.Printf("CArgV: %#v", **cargv)
+	cargc := C.int(len(os.Args))
+	cargv := stringsToC(os.Args)
 	m := C.led_matrix_create_from_options(config.toC(), &cargc, &cargv)
 	b := C.led_matrix_create_offscreen_canvas(m)
 	c = &RGBLedMatrix{
