@@ -215,39 +215,6 @@ func NewRGBLedMatrix(config *HardwareConfig, argc *int, argv *[]string) (c Matri
 	return c, nil
 }
 
-// NewRGBLedMatrix returns a new matrix using the given size and config
-func NewRGBLedMatrixWithOptions(config *HardwareConfig, run *RuntimeOptions) (c Matrix, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			var ok bool
-			err, ok = r.(error)
-			if !ok {
-				err = fmt.Errorf("error creating matrix: %v", r)
-			}
-		}
-	}()
-
-	if isMatrixEmulator() {
-		return buildMatrixEmulator(config), nil
-	}
-
-	w, h := config.geometry()
-	m := C.from_matrix(C.CreateMatrixFromOptions(config.toC(), run.toC()))
-	b := C.led_matrix_create_offscreen_canvas(m)
-	c = &RGBLedMatrix{
-		Config: config,
-		width:  w, height: h,
-		matrix: m,
-		buffer: b,
-		leds:   make([]C.uint32_t, w*h),
-	}
-	if m == nil {
-		return nil, fmt.Errorf("unable to allocate memory")
-	}
-
-	return c, nil
-}
-
 func isMatrixEmulator() bool {
 	if os.Getenv(MatrixEmulatorENV) == "1" {
 		return true
